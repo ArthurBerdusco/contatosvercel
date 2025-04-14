@@ -1,64 +1,93 @@
-import { neon } from '@neondatabase/serverless';
+// app/page.tsx
+import { neon } from '@neondatabase/serverless'
+import { redirect } from 'next/navigation'
 
-export default function Home() {
+const sql = neon(`${process.env.DATABASE_URL}`)
 
-  async function create(formData: FormData) {
-    'use server';
+// CREATE
+async function create(formData: FormData) {
+  'use server'
+  const nome = formData.get('nome')
+  const numero = formData.get('numero')
+  await sql`INSERT INTO contatos (nome, numero) VALUES (${nome}, ${numero})`
+}
 
-    const sql = neon(`${process.env.DATABASE_URL}`);
+// READ
+async function getContatos() {
+  'use server'
+  const result = await sql`SELECT * FROM contatos ORDER BY id DESC`
+  return result
+}
 
-    const nome = formData.get('nome');
-    const numero = formData.get('numero');
+// DELETE
+async function excluirContato(formData: FormData) {
+  'use server'
+  const id = formData.get('id')
+  await sql`DELETE FROM contatos WHERE id = ${id}`
+  redirect("/");
+}
 
-    await sql`INSERT INTO contatos (nome, numero) VALUES (${nome}, ${numero})`;
-  }
+// UPDATE
+async function editarContato(formData: FormData) {
+  'use server'
+  const id = formData.get('id')
+  const nome = formData.get('nome')
+  const numero = formData.get('numero')
+  await sql`UPDATE contatos SET nome = ${nome}, numero = ${numero} WHERE id = ${id}`
+  redirect('/')
+}
 
-  async function criar100() {
-    'use server';
-
-    const sql = neon(`${process.env.DATABASE_URL}`);
-
-    const nomes = ['Ana', 'Bruno', 'Carlos', 'Daniela', 'Eduardo', 'Fernanda', 'Gabriel', 'Helena', 'Igor', 'Juliana'];
-
-    function getRandomName() {
-      const nome = nomes[Math.floor(Math.random() * nomes.length)];
-      const sobrenome = ['Silva', 'Souza', 'Oliveira', 'Santos', 'Costa', 'Ferreira'];
-      return `${nome} ${sobrenome[Math.floor(Math.random() * sobrenome.length)]}`;
-    }
-
-    function getRandomPhone() {
-      const ddd = Math.floor(Math.random() * 90 + 10);
-      const prefixo = Math.floor(Math.random() * 9000 + 1000);
-      const sufixo = Math.floor(Math.random() * 9000 + 1000);
-      return `(${ddd}) 9${prefixo}-${sufixo}`;
-    }
-
-    for (let i = 0; i < 10000; i++) {
-      const nome = getRandomName();
-      const numero = getRandomPhone();
-      await sql`INSERT INTO contatos (nome, numero) VALUES (${nome}, ${numero})`;
-    }
-
-  }
+export default async function Home() {
+  const contatos = await getContatos()
 
   return (
-    <>
-      <form action={create}>
-        <label htmlFor="">Nome: </label>
-        <input type="text" name='nome' />
+    <main className="max-w-xl mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Contatos</h1>
 
-        <label htmlFor="">Número</label>
-        <input type="text" name='numero' />
-
-        <button type='submit'>Salvar</button>
+      {/* FORM DE CRIAÇÃO */}
+      <form action={create} className="space-y-2 mb-8">
+        <input name="nome" placeholder="Nome" className="border p-2 w-full" required />
+        <input name="numero" placeholder="Número" className="border p-2 w-full" required />
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+          Criar Contato
+        </button>
       </form>
 
-      <form action={criar100}>
-        <label htmlFor="">REPETIÇÃO</label>
-        <button type='submit' className='bg-red-300 rounded m-4'>CRIAR</button>
-      </form>
+      {/* LISTA DE CONTATOS */}
+      {contatos.length === 0 ? (
+        <p>Nenhum contato encontrado.</p>
+      ) : (
+        contatos.map((contato: any) => (
+          <div key={contato.id} className="border p-4 mb-4 rounded space-y-2">
+            <form action={editarContato} className="flex flex-col sm:flex-row gap-2">
+              <input type="hidden" name="id" value={contato.id} />
+              <input
+                name="nome"
+                defaultValue={contato.nome}
+                className="border p-2 w-full"
+              />
+              <input
+                name="numero"
+                defaultValue={contato.numero}
+                className="border p-2 w-full"
+              />
+              <button type="submit" className="bg-green-500 text-white px-4 rounded">
+                Editar
+              </button>
+            </form>
 
-    </>
-
-  );
+            <form action={excluirContato}>
+              <input type="hidden" name="id" value={contato.id} />
+              <button
+                type="submit"
+                className="bg-red-500 text-white px-4 py-1 rounded mt-2"
+              >
+                Deletar
+              </button>
+            </form>
+          </div>
+        ))
+      )}
+    </main>
+  )
 }
