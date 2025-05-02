@@ -1,14 +1,21 @@
+// app/page.tsx
 import { neon } from '@neondatabase/serverless'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
 const sql = neon(`${process.env.DATABASE_URL}`)
 
 // CREATE
 async function create(formData: FormData) {
   'use server'
-  const nome = formData.get('nome')
-  const numero = formData.get('numero')
+  const nome = formData.get('nome')?.toString()
+  const numero = formData.get('numero')?.toString()
+
+  if (!nome || !numero) return
   await sql`INSERT INTO contatos (nome, numero) VALUES (${nome}, ${numero})`
+
+  revalidatePath('/')
+  return redirect('/')
 }
 
 // READ
@@ -21,21 +28,29 @@ async function getContatos() {
 // DELETE
 async function excluirContato(formData: FormData) {
   'use server'
-  const id = formData.get('id')
+  const id = formData.get('id')?.toString()
+  if (!id) return
   await sql`DELETE FROM contatos WHERE id = ${id}`
-  redirect("/");
+
+  revalidatePath('/')
+  return redirect('/')
 }
 
 // UPDATE
 async function editarContato(formData: FormData) {
   'use server'
-  const id = formData.get('id')
-  const nome = formData.get('nome')
-  const numero = formData.get('numero')
+  const id = formData.get('id')?.toString()
+  const nome = formData.get('nome')?.toString()
+  const numero = formData.get('numero')?.toString()
+
+  if (!id || !nome || !numero) return
   await sql`UPDATE contatos SET nome = ${nome}, numero = ${numero} WHERE id = ${id}`
-  redirect('/')
+
+  revalidatePath('/')
+  return redirect('/')
 }
 
+// COMPONENTE PRINCIPAL
 export default async function Home() {
   const contatos = await getContatos()
 
