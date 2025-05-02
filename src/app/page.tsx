@@ -1,4 +1,3 @@
-// app/page.tsx
 import { neon } from '@neondatabase/serverless'
 import { redirect } from 'next/navigation'
 
